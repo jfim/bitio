@@ -35,13 +35,6 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-	<distributionManagement>
-		<repository>
-			<id>jfim-public-releases</id>
-			<name>jean-francois.im Public Releases</name>
-			<url>http://sakura.localnet:8080/nexus/content/repositories/public-releases</url>
-		</repository>
-	</distributionManagement>
 	<build>
 		<plugins>
 			<plugin>
