@@ -105,7 +105,7 @@
             <plugin>
                 <groupId>com.github.github</groupId>
                 <artifactId>site-maven-plugin</artifactId>
-                <version>0.7</version>
+                <version>0.8</version>
                 <configuration>
                     <message>Maven artifacts for ${project.version}</message>
                     <noJekyll>true</noJekyll>
@@ -117,7 +117,6 @@
                     <repositoryName>bitio</repositoryName>
                     <repositoryOwner>jfim</repositoryOwner>
                     <merge>true</merge>
-                    <dryRun>true</dryRun>
                 </configuration>
                 <executions>
                     <!-- run site-maven-plugin's 'site' target as part of the build's normal 'deploy' phase -->
