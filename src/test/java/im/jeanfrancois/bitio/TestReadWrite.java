@@ -27,18 +27,18 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
 /**
- * TODO Document me!
+ * TODO Document me! :3
  *
  * @author jfim
  */
 public class TestReadWrite extends TestCase {
-	@Test
 	public void testAlignedReadsAndWrites() throws Exception {
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 		BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
 		for(int i = 0; i < 256; ++i) {
 			bitOutputStream.writeBinary(i, 8);
 		}
+        bitOutputStream.close();
 
 		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
 		BitInputStream bitInputStream = new BitInputStream(byteArrayInputStream);
@@ -47,7 +47,27 @@ public class TestReadWrite extends TestCase {
 		}
 	}
 
-	@Test
+    public void testVariousReadsAndWritesExhaustive() throws Exception {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
+        for(int numBits = 0; numBits < 10; ++numBits) {
+            int maxValue = (1 << numBits) - 1;
+            for(int value = 0; value < maxValue; ++value) {
+                bitOutputStream.writeBinary(value, numBits);
+            }
+        }
+        bitOutputStream.close();
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+        BitInputStream bitInputStream = new BitInputStream(byteArrayInputStream);
+        for(int numBits = 0; numBits < 10; ++numBits) {
+            int maxValue = (1 << numBits) - 1;
+            for(int value = 0; value < maxValue; ++value) {
+                assertEquals(bitInputStream.readBinary(numBits), value);
+            }
+        }
+    }
+
 	public void testRiceCodingReadsAndWrites() throws Exception {
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 		BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
@@ -56,6 +76,7 @@ public class TestReadWrite extends TestCase {
 				bitOutputStream.writeRice(i, numBits);
 			}
 		}
+        bitOutputStream.close();
 
 		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
 		BitInputStream bitInputStream = new BitInputStream(byteArrayInputStream);
@@ -65,4 +86,48 @@ public class TestReadWrite extends TestCase {
 			}
 		}
 	}
+
+    public void testMisalignedByteWrites() throws Exception {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
+        for(int i = 0; i < 256; ++i) {
+            for(int numBits = 0; numBits < 16; ++numBits) {
+                bitOutputStream.writeZeroes(numBits);
+                bitOutputStream.write(i);
+            }
+        }
+        bitOutputStream.close();
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+        BitInputStream bitInputStream = new BitInputStream(byteArrayInputStream);
+        for(int i = 0; i < 256; ++i) {
+            for(int numBits = 0; numBits < 16; ++numBits) {
+                assertEquals(0, bitInputStream.readBinary(numBits));
+                assertEquals(i, bitInputStream.read());
+            }
+        }
+    }
+
+    public void testRealignedByteWrites() throws Exception {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
+        for(int i = 0; i < 256; ++i) {
+            for(int numBits = 0; numBits < 16; ++numBits) {
+                bitOutputStream.writeZeroes(numBits);
+                bitOutputStream.flushCurrentByteAndRealignToByteBoundary();
+                bitOutputStream.write(i);
+            }
+        }
+        bitOutputStream.close();
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+        BitInputStream bitInputStream = new BitInputStream(byteArrayInputStream);
+        for(int i = 0; i < 256; ++i) {
+            for(int numBits = 0; numBits < 16; ++numBits) {
+                assertEquals(0, bitInputStream.readBinary(numBits));
+                bitInputStream.realignToByteBoundary();
+                assertEquals(i, bitInputStream.read());
+            }
+        }
+    }
 }
