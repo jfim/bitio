@@ -86,6 +86,9 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <encoding>utf8</encoding>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
