@@ -17,184 +17,110 @@
  You should have received a copy of the GNU Lesser General Public License
  along with BitIO.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package im.jeanfrancois.bitio;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * A bit-oriented output stream.
+ * Output stream to which individual bits can be written.
  *
- * @author Jean-Francois Im
+ * @author jfim
  */
 public class BitOutputStream extends OutputStream {
-    private OutputStream outputStream;
-    private int currentByte = 0;
-    private int currentBits = 0;
+    private final OutputStream outputStream;
+    private final BitSink bitSink;
 
-    /**
-     * Constructs a BitOutputStream with a given output stream.
-     *
-     * @param outputStream The underlying output stream to write bits to.
-     */
     public BitOutputStream(OutputStream outputStream) {
         this.outputStream = outputStream;
+        bitSink = new BitSink(new OutputStreamByteSink(outputStream));
+    }
+
+    @Override
+    public void write(int value) throws IOException {
+        bitSink.writeByte(value);
+    }
+
+    @Override
+    public void flush() throws IOException {
+        outputStream.flush();
+    }
+
+    @Override
+    public void close() throws IOException {
+        bitSink.flushCurrentByteAndRealignToByteBoundary();
+        outputStream.close();
     }
 
     /**
      * Writes a single bit to the output stream.
      *
      * @param value The bit to write
-     * @throws IOException If an underlying IOException occurs while writing to the stream
+     * @throws java.io.IOException If an underlying IOException occurs while writing to the stream
      */
-    public void writeBit(final boolean value) throws IOException {
-        currentBits++;
-        currentByte <<= 1;
-
-        if (value)
-            currentByte += 1;
-
-        if (currentBits == 8) {
-            outputStream.write(currentByte);
-            currentBits = 0;
-            currentByte = 0;
-        }
+    public void writeBit(boolean value) throws IOException {
+        bitSink.writeBit(value);
     }
 
     /**
      * Writes a number of zeroes to the output stream
      *
      * @param count The number of zeroes to write
-     * @throws IOException If an underlying IOException occurs while writing to the stream
+     * @throws java.io.IOException If an underlying IOException occurs while writing to the stream
      */
-    public void writeZeroes(final int count) throws IOException {
-        if (count + currentBits < 8) {
-            currentByte <<= count;
-            currentBits += count;
-        } else {
-            // Fill the current byte with zeroes
-            final int bitsWritten = 8 - currentBits;
-            currentByte <<= bitsWritten;
-            outputStream.write(currentByte);
+    public void writeZeroes(int count) throws IOException {
+        bitSink.writeZeroes(count);
+    }
 
-            // Write zero bytes
-            final int bitsRemaining = count - bitsWritten;
-            final int bytesRemaining = bitsRemaining / 8;
-            for (int i = 0; i < bytesRemaining; ++i) {
-                outputStream.write(0);
-            }
+    /**
+     * Flushes the current byte and realigns the stream to a byte boundary.
+     *
+     * @throws java.io.IOException If an IOException occurs while writing the current byte
+     */
+    public void flushCurrentByteAndRealignToByteBoundary() throws IOException {
+        bitSink.flushCurrentByteAndRealignToByteBoundary();
+    }
 
-            // Set the current bit position to the number of remaining bits
-            currentByte = 0;
-            currentBits = bitsRemaining % 8;
-        }
+    /**
+     * Writes a Rice-coded value to the output stream.
+     *
+     * @param value        The value to write, which must be positive.
+     * @param numFixedBits The number of bits used for the M parameter, for example 3 would mean a value of M=2<sup>3</sup>=8.
+     * @throws java.io.IOException If an underlying IOException occurs while writing to the stream
+     */
+    public void writeRice(int value, int numFixedBits) throws IOException {
+        bitSink.writeRice(value, numFixedBits);
+    }
+
+    /**
+     * Writes a certain number of bits to the output stream
+     *
+     * @param value   The value to write to the output stream, must be smaller than 2<sup>numBits</sup>
+     * @param numBits The number of bits to be written to the output stream
+     * @throws java.io.IOException If an underlying IOException occurs while writing to the stream
+     */
+    public void writeBinary(int value, int numBits) throws IOException {
+        bitSink.writeBinary(value, numBits);
+    }
+
+    /**
+     * Writes a complete byte to the underlying output stream.
+     *
+     * @param value The value to write.
+     * @throws java.io.IOException If an IOException occurs while writing the byte
+     */
+    public void writeByte(int value) throws IOException {
+        bitSink.writeByte(value);
     }
 
     /**
      * Writes an unary-coded value to the output stream
      *
      * @param value The value to write to the output stream
-     * @throws IOException If an underlying IOException occurs while writing to the stream
+     * @throws java.io.IOException If an underlying IOException occurs while writing to the stream
      */
-    public void writeUnary(final int value) throws IOException {
-        if (value + currentBits + 1 < 8) {
-            currentByte <<= value + 1;
-            currentByte += 1;
-            currentBits += value + 1;
-        } else {
-            writeZeroes(value);
-            writeBit(true);
-        }
-    }
-
-    /**
-     * Writes a certain number of bits to the output stream
-     *
-     * @param value   The value to write to the output stream
-     * @param numBits The number of bits to be written to the output stream
-     * @throws IOException If an underlying IOException occurs while writing to the stream
-     */
-    public void writeBinary(final int value, final int numBits) throws IOException {
-        if (numBits + currentBits < 8) {
-            currentByte <<= numBits;
-            currentByte |= (value) & ((2 << numBits) - 1);
-            currentBits += numBits;
-        } else {
-            // Write the top part
-            final int bitsWritten = 8 - currentBits;
-            currentByte <<= bitsWritten;
-            currentByte |= (value >> (numBits - bitsWritten)) & ((2 << bitsWritten) - 1);
-            outputStream.write(currentByte);
-
-            // Write whole bytes
-            final int bitsRemaining = numBits - bitsWritten;
-            final int bytesToWrite = bitsRemaining / 8;
-            final int bitOffset = bitsRemaining % 8;
-            for (int i = bytesToWrite - 1; i >= 0; --i) {
-                outputStream.write((value >> ((i << 3) + bitOffset)) & 0xFF);
-            }
-
-            // Write the bottom part
-            currentByte = value & ((2 << bitOffset) - 1);
-            currentBits = bitOffset;
-        }
-    }
-
-    /**
-     * Writes a Rice-coded value to the output stream
-     *
-     * @param value        The value to write
-     * @param numFixedBits The number of bits used for the M parameter, for example 3 would mean a value of 2<sup>3+1</sup>=8.
-     * @throws IOException If an underlying IOException occurs while writing to the stream
-     */
-    public void writeRice(int value, int numFixedBits) throws IOException {
-        int m = 1 << numFixedBits;
-        int q = (value - 1) / m;
-        int r = value - (q << numFixedBits) - 1;
-
-        writeUnary(q);
-        writeBinary(r, numFixedBits);
-    }
-
-    /**
-     * Closes the underlying output stream.
-     *
-     * @throws IOException If an IOException occurs while closing the stream
-     */
-    @Override
-    public void close() throws IOException {
-        if (currentBits > 0) {
-            currentByte <<= 8 - currentBits;
-            outputStream.write(currentByte);
-            outputStream.close();
-        }
-    }
-
-    @Override
-    public void write(int value) throws IOException {
-        if (currentBits == 0)
-            outputStream.write(value);
-        else {
-            writeBinary(value, 8);
-            // jfim: Code below is untested
-            /*
-            // Write the top part
-            final int bitsWritten = 8 - currentBits;
-            currentByte <<= bitsWritten;
-            currentByte |= (value >> (8 - bitsWritten)) & ((2 << bitsWritten) - 1);
-            outputStream.write(currentByte);
-
-            // Write the bottom part
-            final int bitsRemaining = 8 - bitsWritten;
-            final int bitOffset = bitsRemaining % 8;
-            currentByte = value & ((2 << bitOffset) - 1);
-            currentBits = bitOffset;
-            */
-        }
-    }
-
-    @Override
-    public void flush() throws IOException {
-        outputStream.flush();
+    public void writeUnary(int value) throws IOException {
+        bitSink.writeUnary(value);
     }
 }

@@ -17,81 +17,89 @@
  You should have received a copy of the GNU Lesser General Public License
  along with BitIO.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package im.jeanfrancois.bitio;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * A bit-oriented input stream.
+ * Input stream from which individual bits can be read from.
  *
- * @author Jean-Francois Im
+ * @author jfim
  */
 public class BitInputStream extends InputStream {
-    private InputStream inputStream;
-    private int currentByte;
-    private int currentBit = 8;
+    /**
+     * The bit source to which all bitwise operations are delegated.
+     */
+    private final BitSource bitSource;
 
     /**
-     * Constructs a BitInputStream with a given inputStream.
-     *
-     * @param inputStream The underlying input stream to read bits from.
+     * The underlying input stream.
      */
-    public BitInputStream(InputStream inputStream) {
+    private final InputStream inputStream;
+
+    public BitInputStream(final InputStream inputStream) {
         this.inputStream = inputStream;
+        this.bitSource = new BitSource(new InputStreamByteSource(inputStream));
+    }
+
+    @Override
+    public int read() throws IOException {
+        return bitSource.readByte();
+    }
+
+    @Override
+    public void close() throws IOException {
+        inputStream.close();
     }
 
     /**
      * Reads a single bit from the input stream.
      *
      * @return true, if the bit read from the input stream is '1'
-     * @throws IOException If an underlying IOException occurs while reading from the stream
+     * @throws java.io.IOException If an underlying IOException occurs while reading from the stream
      */
     public boolean readBit() throws IOException {
-        if (currentBit == 8) {
-            currentBit = 0;
-            currentByte = inputStream.read();
+        return bitSource.readBit();
+    }
 
-            if (currentByte == -1)
-                throw new EOFException();
-        }
-
-        boolean returnValue = (currentByte & (1 << (7 - currentBit))) != 0;
-
-        currentBit++;
-
-        return returnValue;
+    /**
+     * Reads a Rice-coded value from the input stream.
+     *
+     * @param numFixedBits The number of bits used for the M parameter (ie. M is always a power of 2 of value 2<sup>numFixedBits</sup>)
+     * @return The Rice-coded value read from the input stream.
+     * @throws java.io.IOException If an underlying IOException occurs while reading from the stream
+     */
+    public int readRice(int numFixedBits) throws IOException {
+        return bitSource.readRice(numFixedBits);
     }
 
     /**
      * Reads a unary-coded value from the input stream.
      *
      * @return A unary-coded value read from the input stream
-     * @throws IOException If an underlying IOException occurs while reading from the stream
+     * @throws java.io.IOException If an underlying IOException occurs while reading from the stream
      */
     public int readUnary() throws IOException {
-        int value = 0;
-
-        while (!readBit())
-            value++;
-
-        return value;
+        return bitSource.readUnary();
     }
 
     /**
-     * Reads a Rice-coded value from the input stream.
+     * Reads an entire byte from the underlying input stream.
      *
-     * @param numFixedBits The number of bits used for the M parameter
-     * @return The Rice-coded value read from the input stream.
-     * @throws IOException If an underlying IOException occurs while reading from the stream
+     * @return The byte read from the underlying input stream.
+     * @throws java.io.IOException If reading the byte caused an IOException
      */
-    public int readRice(int numFixedBits) throws IOException {
-        int q = readUnary();
-        int r = readBinary(numFixedBits);
-        int m = 1 << numFixedBits;
+    public int readByte() throws IOException {
+        return bitSource.readByte();
+    }
 
-        return 1 + (q << numFixedBits) + r;
+    /**
+     * Discards the remaining bits in the current byte, if any, and starts reading from a byte boundary.
+     */
+    public void realignToByteBoundary() {
+        bitSource.realignToByteBoundary();
     }
 
     /**
@@ -99,71 +107,9 @@ public class BitInputStream extends InputStream {
      *
      * @param numBits The number of bits to read
      * @return The value for the numBits read
-     * @throws IOException If an underlying IOException occurs while reading from the stream
+     * @throws java.io.IOException If an underlying IOException occurs while reading from the stream
      */
     public int readBinary(int numBits) throws IOException {
-        if (numBits + currentBit < 8) {
-            int offset = 8 - currentBit - numBits;
-            currentBit += numBits;
-            return (currentByte >> offset) & ((1 << numBits) - 1);
-        } else {
-            // Read remaining bits in current byte
-            int value = 0;
-            int bitsRemaining = numBits;
-            int bitsRead = 8 - currentBit;
-            value = currentByte & ((1 << bitsRead) - 1);
-            bitsRemaining -= bitsRead;
-            currentBit += bitsRead;
-
-            // Read whole bytes
-            int bytesToRead = bitsRemaining / 8;
-            for (int i = 0; i < bytesToRead; ++i) {
-                currentByte = inputStream.read();
-
-                if (currentByte == -1)
-                    throw new EOFException();
-
-                value <<= 8;
-                value += currentByte;
-            }
-
-            // Read remaining bits
-            bitsRemaining = bitsRemaining % 8;
-            if (bitsRemaining > 0) {
-                currentByte = inputStream.read();
-                value <<= bitsRemaining;
-                int offset = 8 - bitsRemaining;
-                currentBit = bitsRemaining;
-                value += (currentByte >> offset) & ((1 << bitsRemaining) - 1);
-            }
-
-            return value;
-        }
-    }
-
-    @Override
-    public int read() throws IOException {
-        return readBinary(8);
-        // jfim: Code below is untested
-        /*
-        // Read remaining bits in current byte
-        int value = 0;
-        int bitsRemaining = 8;
-        int bitsRead = 8 - currentBit;
-        value = currentByte & ((1 << bitsRead) - 1);
-        bitsRemaining -= bitsRead;
-        currentBit += bitsRead;
-
-        // Read remaining bits
-        bitsRemaining = bitsRemaining % 8;
-        if (bitsRemaining > 0) {
-            currentByte = inputStream.read();
-            value <<= bitsRemaining;
-            int offset = 8 - bitsRemaining;
-            currentBit = bitsRemaining;
-            value += (currentByte >> offset) & ((1 << bitsRemaining) - 1);
-        }
-
-        return value;*/
+        return bitSource.readBinary(numBits);
     }
 }
