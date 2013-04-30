@@ -51,7 +51,7 @@ necessary.
 Add this repository:
 
     <repository>
-        <id></id>
+        <id>bitio-mvn-repo</id>
         <url>https://raw.github.com/jfim/bitio/mvn-repo/</url>
         <snapshots>
             <enabled>true</enabled>
