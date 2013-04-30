@@ -130,4 +130,34 @@ public class TestReadWrite extends TestCase {
             }
         }
     }
+
+    public void testBinaryFormat() throws Exception {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1);
+        BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
+
+        // Write the value 3, encoded over two bits
+        bitOutputStream.writeBinary(3, 2);
+
+        // Write two zeros
+        bitOutputStream.writeZeroes(1);
+        bitOutputStream.writeBit(false);
+
+        // Write 2, unary encoded (ie. 001b)
+        bitOutputStream.writeUnary(2);
+
+        // Realign to be on a byte boundary
+        bitOutputStream.flushCurrentByteAndRealignToByteBoundary();
+
+        // Write 42 using Rice coding and M=16 (2<sup>4<sup>), so that
+        // q = 2, r = 10 (ie. x101 0100 = 84)
+        bitOutputStream.writeRice(42, 4);
+
+        // Realign to be on a byte boundary
+        bitOutputStream.flushCurrentByteAndRealignToByteBoundary();
+
+        bitOutputStream.close();
+
+        assertEquals(67, byteArrayOutputStream.toByteArray()[0]);
+        assertEquals(84, byteArrayOutputStream.toByteArray()[1]);
+    }
 }

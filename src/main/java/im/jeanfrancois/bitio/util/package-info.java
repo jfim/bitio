@@ -19,7 +19,6 @@
  */
 
 /**
- * BitIO offers fast operations for streams that need to be packed at the bit
- * level like many compressed data formats.
+ * Various utilities useful when working with bit streams.
  */
-package im.jeanfrancois.bitio;
+package im.jeanfrancois.bitio.util;

@@ -24,7 +24,7 @@
     <groupId>im.jeanfrancois</groupId>
     <artifactId>bitio</artifactId>
     <packaging>jar</packaging>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
     <name>bitio</name>
     <url>http://maven.apache.org</url>
     <dependencies>

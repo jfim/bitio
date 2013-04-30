@@ -153,7 +153,11 @@ public class BitSink {
     }
 
     /**
-     * Writes a Rice-coded value to the byte sink.
+     * Writes a Rice-coded value, which must be positive, to the byte sink. If
+     * negative values are desired, the
+     * {@link im.jeanfrancois.bitio.util.BitIOUtils#encodeAsZigZag(int)
+     * encodeAsZigZag} method allows encoding negative values as positive
+     * integers.
      *
      * @param value        The value to write, which must be positive.
      * @param numFixedBits The number of bits used for the M parameter, for example 3 would mean a value of M=2<sup>3</sup>=8.
