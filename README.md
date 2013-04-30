@@ -32,7 +32,7 @@ stream, where the xxxx xx11 part is from the first writeBinary, the
 xxxx 00xx part is from the writeZeros and writeBit calls and the x100
 xxxx part is from the writeUnary method.
 
-    // Write 42 using Rice coding and M=16 (2<sup>4<sup>), so that
+    // Write 42 using Rice coding and M=16 (2⁴), so that
     // q = 2, r = 10
     bitOutputStream.writeRice(42, 4);
 
@@ -41,4 +41,28 @@ xxxx part is from the writeUnary method.
 
 This will have written the value 84 (x101 0100) to the stream. As the byte is
 not completely filled, it will not be written unless either
-flushCurrentByteAndRealignToByteBoundary() or close() is called.
+`flushCurrentByteAndRealignToByteBoundary()` or `close()` is called. As Rice
+coding cannot handle negative values, `BitIOUtils.encodeAsZigZag()`
+should be called to encode the negative value as a positive integer, if
+necessary.
+
+## Maven ##
+
+Add this repository:
+
+    <repository>
+        <id></id>
+        <url>https://raw.github.com/jfim/bitio/mvn-repo/</url>
+        <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+        </snapshots>
+    </repository>
+
+and this dependency
+
+    <dependency>
+        <groupId>im.jeanfrancois</groupId>
+        <artifactId>bitio</artifactId>
+        <version>0.2.0</version>
+    </dependency>
