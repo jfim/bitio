@@ -20,6 +20,7 @@
 
 package im.jeanfrancois.bitio;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -37,6 +38,11 @@ public class InputStreamByteSource implements ByteSource {
 
     @Override
     public int readByte() throws IOException {
-        return inputStream.read();
+        final int readValue = inputStream.read();
+
+        if (readValue == -1)
+            throw new EOFException();
+
+        return readValue;
     }
 }
