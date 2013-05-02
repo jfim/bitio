@@ -45,6 +45,7 @@ public class TestReadWrite extends TestCase {
 		for(int i = 0; i < 256; ++i) {
 			assertEquals(bitInputStream.readBinary(8), i);
 		}
+        bitInputStream.close();
 	}
 
     public void testVariousReadsAndWritesExhaustive() throws Exception {
@@ -66,6 +67,68 @@ public class TestReadWrite extends TestCase {
                 assertEquals(bitInputStream.readBinary(numBits), value);
             }
         }
+        bitInputStream.close();
+    }
+
+    public void testWriteNegativeNumbers() throws Exception {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
+        for(int numBits = 0; numBits < 10; ++numBits) {
+            for(int value = -1024; value < 1024; ++value) {
+                bitOutputStream.writeBinary(value, numBits);
+            }
+        }
+        bitOutputStream.close();
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+        BitInputStream bitInputStream = new BitInputStream(byteArrayInputStream);
+        for(int numBits = 0; numBits < 10; ++numBits) {
+            for(int value = -1024; value < 1024; ++value) {
+                final int expectedValue = (0x03FF >> (10 - numBits)) & value;
+                assertEquals(bitInputStream.readBinary(numBits), expectedValue);
+            }
+        }
+        bitInputStream.close();
+    }
+
+    public void testWriteValueRange() throws Exception {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
+        for(int value = -1024; value < 1024; ++value) {
+            bitOutputStream.writeBinary(value, 32);
+        }
+        bitOutputStream.close();
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+        BitInputStream bitInputStream = new BitInputStream(byteArrayInputStream);
+        for(int value = -1024; value < 1024; ++value) {
+            assertEquals(bitInputStream.readBinary(32), value);
+        }
+        bitInputStream.close();
+    }
+
+    public void testWriteMinMax() throws Exception {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BitOutputStream bitOutputStream = new BitOutputStream(byteArrayOutputStream);
+        for(int i = 0; i < 50; ++i) {
+            if (i % 2 == 0) {
+                bitOutputStream.writeBinary(Integer.MIN_VALUE, 32);
+            } else {
+                bitOutputStream.writeBinary(Integer.MAX_VALUE, 32);
+            }
+        }
+        bitOutputStream.close();
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+        BitInputStream bitInputStream = new BitInputStream(byteArrayInputStream);
+        for(int i = 0; i < 50; ++i) {
+            if (i % 2 == 0) {
+                assertEquals(bitInputStream.readBinary(32), Integer.MIN_VALUE);
+            } else {
+                assertEquals(bitInputStream.readBinary(32), Integer.MAX_VALUE);
+            }
+        }
+        bitInputStream.close();
     }
 
 	public void testRiceCodingReadsAndWrites() throws Exception {
@@ -85,6 +148,7 @@ public class TestReadWrite extends TestCase {
 				assertEquals(bitInputStream.readRice(numBits), i);
 			}
 		}
+        bitInputStream.close();
 	}
 
     public void testMisalignedByteWrites() throws Exception {
@@ -106,6 +170,7 @@ public class TestReadWrite extends TestCase {
                 assertEquals(i, bitInputStream.read());
             }
         }
+        bitInputStream.close();
     }
 
     public void testRealignedByteWrites() throws Exception {
@@ -129,6 +194,7 @@ public class TestReadWrite extends TestCase {
                 assertEquals(i, bitInputStream.read());
             }
         }
+        bitInputStream.close();
     }
 
     public void testBinaryFormat() throws Exception {

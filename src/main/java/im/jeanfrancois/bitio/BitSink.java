@@ -123,13 +123,13 @@ public class BitSink {
         // Can we fit the bits in the current byte?
         if (numBits + currentBitCount < 8) {
             // Yes, just write the value and increment the bit count
-            final int maskedValue = value & ((2 << numBits) - 1);
+            final int maskedValue = value & ((1 << numBits) - 1);
             currentByte |= maskedValue << currentBitCount;
             currentBitCount += numBits;
         } else {
             // Write the bits that fit in the current byte
             final int bitsThatFit = 8 - currentBitCount;
-            final int maskedBitsThatFit = value & ((2 << bitsThatFit) - 1);
+            final int maskedBitsThatFit = value & ((1 << bitsThatFit) - 1);
             currentByte |= maskedBitsThatFit << currentBitCount;
             byteSink.writeByte(currentByte);
 
@@ -140,15 +140,14 @@ public class BitSink {
             // Write whole bytes
             for (int i = 0; i < wholeBytesToWrite; ++i) {
                 final int bitOffset = (i * 8 + bitsThatFit);
-                final int maskedValue = value & (0xFF << bitOffset);
-                byteSink.writeByte(maskedValue >> bitOffset);
+                final int valueToWrite = (value >> bitOffset) & 0xFF;
+                byteSink.writeByte(valueToWrite);
             }
 
             // Write the remaining bits
             final int bitOffset = (wholeBytesToWrite * 8 + bitsThatFit);
-            final int maskedValue = value & (0xFF << bitOffset);
-            currentByte = maskedValue >> bitOffset;
             currentBitCount = bitsRemainingToWrite % 8;
+            currentByte = (value >> bitOffset) & (0xFF >> (8 - currentBitCount));
         }
     }
 

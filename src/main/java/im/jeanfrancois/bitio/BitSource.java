@@ -127,9 +127,13 @@ public class BitSource {
 
             // Read remaining bits
             final int trailingBitCount = bitsRemainingToRead % 8;
-            currentByte = byteSource.readByte();
-            value |= (currentByte & ((1 << trailingBitCount) - 1)) << (bytesToRead * 8 + bitsLeftInCurrentByte);
-            currentBitPosition = trailingBitCount;
+            if (trailingBitCount != 0) {
+                currentByte = byteSource.readByte();
+                value |= (currentByte & ((1 << trailingBitCount) - 1)) << (bytesToRead * 8 + bitsLeftInCurrentByte);
+                currentBitPosition = trailingBitCount;
+            } else {
+                currentBitPosition = 8;
+            }
 
             return value;
         }
