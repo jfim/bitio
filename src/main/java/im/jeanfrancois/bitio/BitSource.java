@@ -71,12 +71,44 @@ public class BitSource {
      * @throws IOException If an underlying IOException occurs while reading from the stream
      */
     public int readUnary() throws IOException {
-        int value = 0;
+        // Read in a byte if necessary
+        if (currentBitPosition == 8) {
+            currentBitPosition = 0;
+            currentByte = byteSource.readByte();
 
-        while (!readBit())
-            value++;
+            if (currentByte == -1)
+                throw new EOFException();
+        }
 
-        return value;
+        int validBitsInCurrentByte = 8 - currentBitPosition;
+        int payloadBitsInCurrentByte = currentByte >> currentBitPosition;
+        int zeroBitsInCurrentByte = Integer.numberOfTrailingZeros(payloadBitsInCurrentByte);
+
+        // Are all bits in the current byte all zero?
+        if(zeroBitsInCurrentByte < validBitsInCurrentByte) {
+            // No, advance our bit pointer
+            currentBitPosition += zeroBitsInCurrentByte + 1;
+            return zeroBitsInCurrentByte;
+        } else {
+            int zeroBitCount = validBitsInCurrentByte;
+
+            // Read bytes that are all zeroes
+            currentByte = byteSource.readByte();
+            while(currentByte == 0) {
+                zeroBitCount += 8;
+                currentByte = byteSource.readByte();
+
+                if (currentByte == -1)
+                    throw new EOFException();
+            }
+
+            // Count the number of remaining zeroes
+            zeroBitsInCurrentByte = Integer.numberOfTrailingZeros(currentByte);
+            zeroBitCount += zeroBitsInCurrentByte;
+            currentBitPosition = zeroBitsInCurrentByte + 1;
+
+            return zeroBitCount;
+        }
     }
 
     /**
